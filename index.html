@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>UPI Receipt • Sample</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --bg:#0f0f10; --card:#171717; --muted:#a3a3a3;
+    --line:#262626; --accent:#22c55e; --purple:#7c3aed;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,Helvetica,sans-serif;background:#e5e7eb;color:#111}
+  .wrap{max-width:1000px;margin:24px auto;padding:16px;display:grid;gap:16px;grid-template-columns:1fr 1fr}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}}
+  .panel{background:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.08);padding:16px}
+  .panel h2{margin:0 0 12px;font-size:18px}
+  .panel label{display:block;font-size:12px;color:#444;margin:.75rem 0 .25rem}
+  .panel input,.panel select, .panel textarea{
+    width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font:inherit;background:#fff
+  }
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{display:inline-block;border:0;border-radius:10px;padding:10px 14px;color:#fff;background:#4f46e5;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .btn.secondary{background:#111}
+  /* ===== Receipt (look-alike, not exact) ===== */
+  .phone{display:flex;justify-content:center}
+  .receipt{
+    width:380px;border-radius:18px;overflow:hidden;background:var(--bg);color:#fff;position:relative;
+    box-shadow:0 10px 30px rgba(0,0,0,.35)
+  }
+  .statusbar{background:var(--accent);padding:14px 16px;font-weight:700;text-align:left}
+  .statusbar small{display:block;font-weight:400;opacity:.9;margin-top:2px}
+  .sec{padding:16px;border-top:1px solid var(--line)}
+  .head{display:flex;align-items:center;gap:12px}
+  .avatar{width:44px;height:44px;background:#2563eb;border-radius:50%;display:grid;place-items:center;font-weight:700}
+  .title{font-size:16px;margin:0}
+  .subtitle{font-size:12px;color:var(--muted);margin-top:2px}
+  .kv{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px dashed var(--line)}
+  .kv:last-child{border-bottom:0}
+  .muted{color:var(--muted);font-size:12px}
+  .amt{font-size:28px;font-weight:700}
+  .chip{font-size:12px;color:#fff;background:var(--accent);padding:4px 10px;border-radius:999px}
+  .actions{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding-top:6px}
+  .act{background:#1f2937;border-radius:14px;height:58px;display:grid;place-items:center;font-size:11px;color:#d1d5db}
+  /* Non-removable watermark (prevents misuse) */
+  .wm{
+    position:absolute;inset:0;pointer-events:none;display:grid;place-items:center;opacity:.12;
+    font-weight:800;font-size:46px;letter-spacing:.25em;transform:rotate(-20deg)
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- ===== Left: Controls ===== -->
+    <div class="panel">
+      <h2>Receipt Controls (Demo)</h2>
+      <label>Payer (your name)</label>
+      <input id="payer" value="Jayesh Solanke" />
+
+      <div class="row">
+        <div>
+          <label>Payee name</label>
+          <input id="payee" value="SHAH MONIL KAMLESH" />
+        </div>
+        <div>
+          <label>UPI ID</label>
+          <input id="upi" value="thankyou20@ibl" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Amount (₹)</label>
+          <input id="amount" value="600" />
+        </div>
+        <div>
+          <label>Status</label>
+          <select id="status">
+            <option value="Success" selected>Success</option>
+            <option value="Pending">Pending</option>
+            <option value="Failed">Failed</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Banking name</label>
+          <input id="bankName" value="Shah Monil Kamlesh" />
+        </div>
+        <div>
+          <label>Debited from (masked)</label>
+          <input id="debited" value="XXXXXXXX1499" />
+        </div>
+      </div>
+
+      <label>Note</label>
+      <input id="note" value="Send me amount" />
+
+      <div class="row">
+        <div>
+          <label>Transaction ID (auto)</label>
+          <input id="txnId" value="" />
+        </div>
+        <div>
+          <label>UTR (auto)</label>
+          <input id="utr" value="" />
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="regen">Randomize IDs</button>
+        <button class="btn secondary" id="save">Download Screenshot (PNG)</button>
+      </div>
+
+      <p class="muted" style="margin-top:10px">
+        IDs UI में **masked** हैं (Txn/UTR केवल आख़िरी 3 अंक दिखेंगे)। यह केवल शिक्षा/डेमो के लिए है।
+      </p>
+    </div>
+
+    <!-- ===== Right: PhonePe-like Receipt Preview ===== -->
+    <div class="panel phone">
+      <div class="receipt" id="receipt">
+        <div class="wm">SAMPLE</div>
+        <div class="statusbar" id="statusbar">
+          Transaction <span id="statWord">Successful</span>
+          <small id="when">05:45 pm on 23 Aug 2025</small>
+        </div>
+
+        <div class="sec">
+          <div class="head">
+            <div class="avatar" id="avatarIni">SK</div>
+            <div>
+              <p class="title" id="paidTitle">SHAH MONIL KAMLESH</p>
+              <div class="subtitle" id="upiLine">thankyou20@ibl</div>
+            </div>
+            <div style="margin-left:auto;font-weight:700" id="amtTop">₹80</div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="kv">
+            <div>
+              <div class="muted">Banking Name</div>
+              <div id="bankDisp">Shah Monil Kamlesh</div>
+            </div>
+            <div class="chip" id="chip">Success</div>
+          </div>
+
+          <div class="kv">
+            <div>
+              <div class="muted">Transaction ID</div>
+              <div id="txnDisp">*********281</div>
+            </div>
+            <div style="text-align:right">
+              <div class="muted">Amount</div>
+              <div class="amt" id="amtBig">₹ 600</div>
+            </div>
+          </div>
+
+          <div class="kv">
+            <div>
+              <div class="muted">Debited from</div>
+              <div id="debitedDisp">XXXXXXXX1499</div>
+            </div>
+            <div style="text-align:right">
+              <div class="muted">UTR</div>
+              <div id="utrDisp">*******542</div>
+            </div>
+          </div>
+
+          <div class="kv">
+            <div>
+              <div class="muted">Note</div>
+              <div id="noteDisp">Send me amount</div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <div class="act">Send Again</div>
+            <div class="act">View History</div>
+            <div class="act">Split</div>
+            <div class="act">Share</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Helpers
+  const byId = (id)=>document.getElementById(id);
+  const maskLast3 = (val)=> {
+    if(!val) return "";
+    const s = String(val).replace(/\\s/g,'');
+    return s.replace(/.(?=.{3}$)/g,'*');
+  };
+  const randNum = (len=12)=> Array(len).fill(0).map(()=>Math.floor(Math.random()*10)).join('');
+  const nowStr = ()=> {
+    const d = new Date();
+    const h12 = (h)=> ((h+11)%12+1);
+    const hh = h12(d.getHours());
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    const ampm = d.getHours()<12 ? 'am':'pm';
+    const day = d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).replace(',', '');
+    return `${hh}:${mm} ${ampm} on ${day}`;
+  };
+
+  // Elements
+  const inputs = {
+    payer: byId('payer'), payee: byId('payee'), upi: byId('upi'),
+    amount: byId('amount'), status: byId('status'),
+    bankName: byId('bankName'), debited: byId('debited'),
+    note: byId('note'), txnId: byId('txnId'), utr: byId('utr')
+  };
+
+  function update(){
+    // top header
+    const ok = inputs.status.value;
+    byId('statWord').textContent = ok==='Success' ? 'Successful' : ok;
+    byId('statusbar').style.background = ok==='Success' ? 'var(--accent)' :
+                                         ok==='Pending' ? '#eab308' : '#ef4444';
+    byId('chip').textContent = ok;
+    byId('chip').style.background = byId('statusbar').style.background;
+    byId('when').textContent = nowStr();
+
+    // paid to section
+    byId('paidTitle').textContent = inputs.payee.value || 'Recipient';
+    byId('upiLine').textContent = inputs.upi.value || 'upi@bank';
+    byId('amtTop').textContent = `₹${inputs.amount.value||'0'}`;
+
+    // avatar initials
+    const nm = (inputs.payee.value||'R R').trim().split(/\\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase();
+    byId('avatarIni').textContent = nm;
+
+    // details
+    byId('bankDisp').textContent = inputs.bankName.value || '-';
+    byId('amtBig').textContent = `₹ ${inputs.amount.value || '0'}`;
+    byId('debitedDisp').textContent = inputs.debited.value || 'XXXXXXXX0000';
+    byId('noteDisp').textContent = inputs.note.value || '-';
+
+    // masked IDs (only last 3 visible)
+    const txnRaw = inputs.txnId.value || ('T' + randNum(21));
+    const utrRaw = inputs.utr.value || randNum(12);
+    byId('txnDisp').textContent = maskLast3(txnRaw);
+    byId('utrDisp').textContent = maskLast3(utrRaw);
+  }
+
+  // randomize IDs
+  byId('regen').addEventListener('click', ()=>{
+    inputs.txnId.value = 'T'+randNum(21);
+    inputs.utr.value = randNum(12);
+    update();
+  });
+
+  // live update
+  Object.values(inputs).forEach(el=> el.addEventListener('input', update));
+
+  // first paint
+  inputs.txnId.value = 'T'+randNum(21);
+  inputs.utr.value = randNum(12);
+  update();
+
+  // download screenshot with watermark
+  byId('save').addEventListener('click', async ()=>{
+    const node = byId('receipt');
+    const canvas = await html2canvas(node, {scale:2,useCORS:true,backgroundColor:null});
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'upi-receipt-sample.png';
+    a.click();
+  });
+</script>
+</body>
+</html>
